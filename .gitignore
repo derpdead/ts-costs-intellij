@@ -1,0 +1,12 @@
+/build/
+/dist/
+/node_modules/
+/.gradle/
+/.idea/
+/.ts-costs/
+/.cache/
+/graphify-out/
+*.log
+.DS_Store
+__pycache__/
+*.pyc

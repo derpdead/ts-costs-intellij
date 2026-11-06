@@ -1,0 +1,40 @@
+name: Verify
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm test
+      - name: Download official SDK
+        run: python3 scripts/ci-sdk.py
+      - name: Compile and validate profile model
+        run: python3 build.py --ide "$(cat build/sdk-path.txt)" --test-profile build/test-profile.json
+      - name: Download official Plugin Verifier
+        run: curl --fail --location --retry 3 https://github.com/JetBrains/intellij-plugin-verifier/releases/download/1.411/verifier-cli-1.411-all.jar --output build/verifier.jar
+      - name: Verify binary compatibility
+        run: |
+          SDK=$(cat build/sdk-path.txt)
+          "$SDK/jbr/bin/java" -Xmx2g -Dplugin.verifier.home.dir="$RUNNER_TEMP/plugin-verifier" -jar build/verifier.jar check-plugin dist/ts-costs-0.2.0.zip "$SDK" -offline -verification-reports-dir build/verifier
+          python3 scripts/check-verifier.py build/verifier
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ts-costs-build
+          path: |
+            dist/ts-costs-0.2.0.zip
+            dist/ts-costs-0.2.0-source.zip
+            build/verifier/

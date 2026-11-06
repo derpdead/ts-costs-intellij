@@ -1,0 +1,15 @@
+{
+  "name": "ts-costs-intellij",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node --test test/*.test.mjs" },
+  "engines": { "node": ">=22" },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "typescript6": "npm:typescript@6.0.3",
+    "vue": "3.5.45",
+    "vue-tsc": "3.3.14",
+    "nuxt": "4.6.4"
+  }
+}

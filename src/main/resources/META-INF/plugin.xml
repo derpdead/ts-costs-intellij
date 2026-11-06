@@ -1,0 +1,36 @@
+<idea-plugin>
+  <id>io.github.derpdead.tscosts</id>
+  <name>TS Costs</name>
+  <version>0.2.0</version>
+  <vendor url="https://github.com/derpdead">Maciej Kaczorowski</vendor>
+  <description><![CDATA[
+    <p>Find expensive TypeScript checks directly in your editor, including Vue single-file components.</p>
+    <ul><li>Measured inline costs with source fingerprints to hide stale results.</li>
+    <li>Overview of elapsed time, compiler CPU, peak RSS and TypeScript memory.</li>
+    <li>Searchable hotspot and file rankings with explanations and Vue-generated code.</li>
+    <li>One-click Record: Nuxt type generation, fresh compiler trace, CPU profile and same-run Vue source maps.</li></ul>
+    <p>Uses your installed JavaScript TypeScript 5/6 and vue-tsc. Native tsgo is not supported.
+    Timings are inclusive compiler wall time. CPU and memory are process-wide, not per-line.</p>
+    <p>Open source (MIT). Profiles stay local; no telemetry or automatic uploads.</p>
+    <p><a href="https://github.com/derpdead/ts-costs-intellij">Documentation and source</a></p>
+  ]]></description>
+  <change-notes><![CDATA[0.2: Aggregate metrics, CPU and memory, automatic Nuxt preparation, portable Record,
+    generated-code explanations, searchable paginated views and project settings.]]></change-notes>
+  <idea-version since-build="263" until-build="263.*" />
+  <depends>com.intellij.modules.platform</depends>
+  <extensions defaultExtensionNs="com.intellij">
+    <postStartupActivity implementation="local.tscosts.CostsStartup" />
+    <toolWindow id="TS Costs" anchor="right" factoryClass="local.tscosts.CostsToolWindow" />
+    <notificationGroup id="TS Costs" displayType="BALLOON" />
+  </extensions>
+  <actions>
+    <group id="TsCosts.Menu" text="TS Costs" popup="true">
+      <add-to-group group-id="ToolsMenu" anchor="last" />
+      <action id="TsCosts.Reload" class="local.tscosts.CostsActions$Reload" text="Reload TS Costs Profile" />
+      <action id="TsCosts.Record" class="local.tscosts.CostsActions$Record" text="Record TypeScript Costs" />
+      <action id="TsCosts.Import" class="local.tscosts.CostsActions$Import" text="Import TS Costs Profile…" />
+      <action id="TsCosts.Settings" class="local.tscosts.CostsActions$Settings" text="TS Costs Settings…" />
+      <action id="TsCosts.Toggle" class="local.tscosts.CostsActions$Toggle" text="Show TS Cost Inlays" />
+    </group>
+  </actions>
+</idea-plugin>
