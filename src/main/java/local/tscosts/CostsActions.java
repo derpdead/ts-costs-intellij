@@ -7,6 +7,7 @@ import com.intellij.notification.NotificationType;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.ToggleAction;
 import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.application.WriteIntentReadAction;
 import com.intellij.openapi.fileChooser.FileChooser;
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory;
 import com.intellij.openapi.fileEditor.FileDocumentManager;
@@ -73,7 +74,13 @@ public final class CostsActions {
             if (!new CostsSettingsDialog(project).showAndGet()) return;
         }
         if (!service.recording.compareAndSet(false, true)) return;
-        FileDocumentManager.getInstance().saveAllDocuments();
+        try {
+            WriteIntentReadAction.run(() -> FileDocumentManager.getInstance().saveAllDocuments());
+        } catch (RuntimeException exception) {
+            service.recording.set(false);
+            service.notifyUser("Cannot save documents: " + exception.getMessage(), NotificationType.ERROR);
+            return;
+        }
         var settings = CostsSettings.get(project).getState();
         Path root = service.projectRoot();
         String configuredNode = settings.node;

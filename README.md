@@ -6,6 +6,8 @@ TS Costs records a compiler trace and maps it back to your current source snapsh
 
 ## Install
 
+[JetBrains Marketplace](https://plugins.jetbrains.com/plugin/35858-ts-costs) submission is awaiting moderation.
+
 Download the plugin ZIP from [Releases](https://github.com/derpdead/ts-costs-intellij/releases).
 In your JetBrains IDE, open **Settings → Plugins → ⚙ → Install Plugin from Disk**, select the ZIP and follow the IDE's reload instructions.
 
@@ -84,7 +86,7 @@ python3 build.py --ide "/path/to/idea"
 python3 build.py --ide "/Applications/IntelliJ IDEA.app/Contents"
 ```
 
-Python 3.10+, Node.js 22+ and an IDE SDK with JBR javac 21+ are required. Output: `dist/ts-costs-0.2.0.zip` and a source ZIP. The JAR bundles only plugin classes, resources and the dependency-free Node bridge. Project dependencies are resolved from the package you profile.
+Python 3.10+, Node.js 22+ and an IDE SDK with JBR javac 21+ are required. Output: `dist/ts-costs-0.2.1.zip` and a source ZIP. The JAR bundles only plugin classes, resources and the dependency-free Node bridge. Project dependencies are resolved from the package you profile.
 
 CI downloads the official JetBrains SDK, runs the integration tests, compiles the plugin and runs the official JetBrains Plugin Verifier. Marketplace publication is a separate vendor submission and moderation step.
 

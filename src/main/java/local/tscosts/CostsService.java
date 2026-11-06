@@ -4,6 +4,8 @@ import com.intellij.notification.NotificationGroupManager;
 import com.intellij.notification.NotificationType;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.application.ReadAction;
+import com.intellij.openapi.application.WriteIntentReadAction;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.editor.Editor;
@@ -111,7 +113,10 @@ public final class CostsService implements Disposable {
     public boolean enabled() { return CostsSettings.get(project).getState().inlays; }
     public void onViewChanged(Runnable listener) { viewChanged = listener; }
     public void refreshView() { viewChanged.run(); }
-    public void setEnabled(boolean value) { CostsSettings.get(project).getState().inlays = value; revisions.clear(); refreshEditors(); }
+    public void setEnabled(boolean value) {
+        CostsSettings.get(project).getState().inlays = value;
+        WriteIntentReadAction.run(() -> { revisions.clear(); refreshEditors(); });
+    }
     public void settingsChanged() { imported = null; reload(false); }
     public void setStatus(String value) {
         ApplicationManager.getApplication().invokeLater(() -> { if (!project.isDisposed()) { status = value; viewChanged.run(); } });
@@ -170,8 +175,8 @@ public final class CostsService implements Disposable {
         inlays.put(editor, new ArrayList<>());
         EditorMouseMotionListener listener = new EditorMouseMotionListener() {
             @Override public void mouseMoved(EditorMouseEvent event) {
-                Inlay<?> inlay = event.getInlay();
-                if (inlay == null) inlay = editor.getInlayModel().getElementAt(event.getMouseEvent().getPoint());
+                Inlay<?> inlay = ReadAction.compute(() -> event.getInlay() != null ? event.getInlay()
+                    : editor.getInlayModel().getElementAt(event.getMouseEvent().getPoint()));
                 editor.getContentComponent().setToolTipText(inlay != null && inlay.getRenderer() instanceof CostRenderer renderer
                     ? renderer.tooltip() : null);
             }
@@ -180,7 +185,7 @@ public final class CostsService implements Disposable {
         editor.addEditorMouseMotionListener(listener);
         EditorMouseListener click = new EditorMouseListener() {
             @Override public void mouseClicked(EditorMouseEvent event) {
-                Inlay<?> inlay = editor.getInlayModel().getElementAt(event.getMouseEvent().getPoint());
+                Inlay<?> inlay = ReadAction.compute(() -> editor.getInlayModel().getElementAt(event.getMouseEvent().getPoint()));
                 if (inlay != null && inlay.getRenderer() instanceof CostRenderer renderer) {
                     renderer.activate();
                     event.consume();

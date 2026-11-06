@@ -1,6 +1,7 @@
 package local.tscosts;
 
 import com.intellij.icons.AllIcons;
+import com.intellij.openapi.application.WriteIntentReadAction;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.fileEditor.OpenFileDescriptor;
@@ -259,8 +260,10 @@ public final class CostsToolWindow implements ToolWindowFactory {
             try {
                 var source = service.projectRoot().resolve(row.file.path).normalize();
                 if (!source.toRealPath().startsWith(service.projectRoot().toRealPath())) return;
-                VirtualFile file = LocalFileSystem.getInstance().refreshAndFindFileByNioFile(source);
-                if (file != null) new OpenFileDescriptor(project, file, row.hint == null ? 0 : row.hint.start).navigate(true);
+                WriteIntentReadAction.run(() -> {
+                    VirtualFile file = LocalFileSystem.getInstance().refreshAndFindFileByNioFile(source);
+                    if (file != null) new OpenFileDescriptor(project, file, row.hint == null ? 0 : row.hint.start).navigate(true);
+                });
             } catch (Exception exception) { service.setStatus("Cannot open measured source: " + exception.getMessage()); }
         }
 

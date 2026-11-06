@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1
+
+- Acquire the IDE write-intent lock before saving documents from the tool-window Record button.
+- Reset the recording state if saving documents fails so the action can be retried.
+- Apply the IDE locking contract to editor navigation, inlay toggling and mouse hit testing.
+
 ## 0.2.0
 
 - Project overview with elapsed time, CPU, peak RSS, compiler memory and phase timings.
