@@ -7,7 +7,7 @@ import com.intellij.notification.NotificationType;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.ToggleAction;
 import com.intellij.openapi.application.ApplicationManager;
-import com.intellij.openapi.application.WriteIntentReadAction;
+import com.intellij.openapi.application.ModalityState;
 import com.intellij.openapi.fileChooser.FileChooser;
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory;
 import com.intellij.openapi.fileEditor.FileDocumentManager;
@@ -67,6 +67,12 @@ public final class CostsActions {
     }
 
     public static void record(Project project) {
+        ApplicationManager.getApplication().invokeLater(() -> {
+            if (!project.isDisposed()) recordInContext(project);
+        }, ModalityState.nonModal());
+    }
+
+    private static void recordInContext(Project project) {
         CostsService service = CostsService.get(project);
         if (!Files.exists(service.projectRoot().resolve("tsconfig.json"))
             && !Files.exists(service.projectRoot().resolve("nuxt.config.ts"))
@@ -75,7 +81,7 @@ public final class CostsActions {
         }
         if (!service.recording.compareAndSet(false, true)) return;
         try {
-            WriteIntentReadAction.run(() -> FileDocumentManager.getInstance().saveAllDocuments());
+            FileDocumentManager.getInstance().saveAllDocuments();
         } catch (RuntimeException exception) {
             service.recording.set(false);
             service.notifyUser("Cannot save documents: " + exception.getMessage(), NotificationType.ERROR);

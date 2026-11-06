@@ -2,7 +2,7 @@
 
 ## 0.2.1
 
-- Acquire the IDE write-intent lock before saving documents from the tool-window Record button.
+- Save documents from the tool-window Record button in the IDE's write-safe, nonmodal EDT context.
 - Reset the recording state if saving documents fails so the action can be retried.
 - Apply the IDE locking contract to editor navigation, inlay toggling and mouse hit testing.
 

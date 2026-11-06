@@ -1,7 +1,8 @@
 package local.tscosts;
 
 import com.intellij.icons.AllIcons;
-import com.intellij.openapi.application.WriteIntentReadAction;
+import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.application.ModalityState;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.fileEditor.OpenFileDescriptor;
@@ -257,13 +258,17 @@ public final class CostsToolWindow implements ToolWindowFactory {
         }
 
         private void navigate(Row row) {
+            ApplicationManager.getApplication().invokeLater(() -> {
+                if (!project.isDisposed()) navigateInContext(row);
+            }, ModalityState.nonModal());
+        }
+
+        private void navigateInContext(Row row) {
             try {
                 var source = service.projectRoot().resolve(row.file.path).normalize();
                 if (!source.toRealPath().startsWith(service.projectRoot().toRealPath())) return;
-                WriteIntentReadAction.run(() -> {
-                    VirtualFile file = LocalFileSystem.getInstance().refreshAndFindFileByNioFile(source);
-                    if (file != null) new OpenFileDescriptor(project, file, row.hint == null ? 0 : row.hint.start).navigate(true);
-                });
+                VirtualFile file = LocalFileSystem.getInstance().refreshAndFindFileByNioFile(source);
+                if (file != null) new OpenFileDescriptor(project, file, row.hint == null ? 0 : row.hint.start).navigate(true);
             } catch (Exception exception) { service.setStatus("Cannot open measured source: " + exception.getMessage()); }
         }
 
