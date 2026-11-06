@@ -28,13 +28,13 @@ jobs:
       - name: Verify binary compatibility
         run: |
           SDK=$(cat build/sdk-path.txt)
-          "$SDK/jbr/bin/java" -Xmx2g -Dplugin.verifier.home.dir="$RUNNER_TEMP/plugin-verifier" -jar build/verifier.jar check-plugin dist/ts-costs-0.2.2.zip "$SDK" -offline -verification-reports-dir build/verifier
+          "$SDK/jbr/bin/java" -Xmx2g -Dplugin.verifier.home.dir="$RUNNER_TEMP/plugin-verifier" -jar build/verifier.jar check-plugin dist/ts-costs-0.2.3.zip "$SDK" -offline -verification-reports-dir build/verifier
           python3 scripts/check-verifier.py build/verifier
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: ts-costs-build
           path: |
-            dist/ts-costs-0.2.2.zip
-            dist/ts-costs-0.2.2-source.zip
+            dist/ts-costs-0.2.3.zip
+            dist/ts-costs-0.2.3-source.zip
             build/verifier/

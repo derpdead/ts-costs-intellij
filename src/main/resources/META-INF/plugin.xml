@@ -1,7 +1,7 @@
 <idea-plugin>
   <id>io.github.derpdead.tscosts</id>
   <name>TS Costs</name>
-  <version>0.2.2</version>
+  <version>0.2.3</version>
   <vendor url="https://github.com/derpdead">Maciej Kaczorowski</vendor>
   <description><![CDATA[
     <p>Find expensive TypeScript checks directly in your editor, including Vue single-file components.</p>
@@ -14,7 +14,8 @@
     <p>Open source (MIT). Profiles stay local; no telemetry or automatic uploads.</p>
     <p><a href="https://github.com/derpdead/ts-costs-intellij">Documentation and source</a></p>
   ]]></description>
-  <change-notes><![CDATA[0.2.2: Native syntax-highlighted, read-only source and generated-code previews with line numbers and soft wrapping.
+  <change-notes><![CDATA[0.2.3: Copy and expand recorded snippets, toggle line wrapping, and read compact cost details with type-checking context.
+    0.2.2: Native syntax-highlighted, read-only source and generated-code previews with line numbers and soft wrapping.
     0.2.1: Fix saving documents when recording from the tool-window button.
     0.2: Aggregate metrics, CPU and memory, automatic Nuxt preparation, portable Record,
     generated-code explanations, searchable paginated views and project settings.]]></change-notes>
