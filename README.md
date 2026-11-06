@@ -51,7 +51,7 @@ Profiling adds overhead and forces a fresh check. Results describe this particul
 
 For `<Widget v-model:code="value" />`, Vue generates an update-event handler and helper types such as `Partial<__VLS_ResolveEvent<…>>` and `__VLS_EventArgs<…>`. TypeScript checks the event payload, inferred handler arguments and assignment to the model.
 
-The source mapping may point to just `value`, even though the measured declaration includes that generated type machinery. The **Why this cost** pane explains the scope; **Generated code** shows the exact same-run snippet. Lazy resolution of a component's types can contribute on first use. Without nested trace evidence, the plugin does not claim which inner type caused the delay or promise a specific optimization.
+The source mapping may point to just `value`, even though the measured declaration includes that generated type machinery. The **Why this cost** pane explains the scope and shows source in a read-only editor with preserved indentation, syntax highlighting, line numbers and soft wrapping. **Generated code** uses the same preview for the exact same-run TypeScript snippet. Both previews follow your IDE editor font and color scheme. Lazy resolution of a component's types can contribute on first use. Without nested trace evidence, the plugin does not claim which inner type caused the delay or promise a specific optimization.
 
 ## Local artifacts and Chrome
 
@@ -86,7 +86,7 @@ python3 build.py --ide "/path/to/idea"
 python3 build.py --ide "/Applications/IntelliJ IDEA.app/Contents"
 ```
 
-Python 3.10+, Node.js 22+ and an IDE SDK with JBR javac 21+ are required. Output: `dist/ts-costs-0.2.1.zip` and a source ZIP. The JAR bundles only plugin classes, resources and the dependency-free Node bridge. Project dependencies are resolved from the package you profile.
+Python 3.10+, Node.js 22+ and an IDE SDK with JBR javac 21+ are required. Output: `dist/ts-costs-0.2.2.zip` and a source ZIP. The JAR bundles only plugin classes, resources and the dependency-free Node bridge. Project dependencies are resolved from the package you profile.
 
 CI downloads the official JetBrains SDK, runs the integration tests, compiles the plugin and runs the official JetBrains Plugin Verifier. Marketplace publication is a separate vendor submission and moderation step.
 

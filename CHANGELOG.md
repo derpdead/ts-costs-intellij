@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.2
+
+- Show source in Why this cost in a native read-only code preview instead of inline HTML.
+- Preserve indentation and line breaks, use IDE syntax colors and editor fonts, and wrap long lines.
+- Apply the same preview to Generated code, with line numbers and normal text selection.
+
 ## 0.2.1
 
 - Save documents from the tool-window Record button in the IDE's write-safe, nonmodal EDT context.
