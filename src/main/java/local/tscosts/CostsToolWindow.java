@@ -66,8 +66,8 @@ public final class CostsToolWindow implements ToolWindowFactory {
         private final JEditorPane explanation = html("");
         private final JEditorPane evidence = html("");
         private final JPanel sourcePanel = new JPanel(new BorderLayout(0, 6));
-        private final CodePreview source;
-        private final CodePreview generated;
+        private final CodePreviewPanel source;
+        private final CodePreviewPanel generated;
         private boolean disposed;
         private ProfileData displayed;
         private ProfileData.Hint displayedHint;
@@ -76,8 +76,8 @@ public final class CostsToolWindow implements ToolWindowFactory {
         View(Project project) {
             this.project = project;
             service = CostsService.get(project);
-            source = new CodePreview(project, this, "Measured source code");
-            generated = new CodePreview(project, this, "Generated TypeScript code");
+            source = new CodePreviewPanel(project, this, "Recorded source");
+            generated = new CodePreviewPanel(project, this, "Generated TypeScript");
             inlays = new JCheckBox("Inlays", service.enabled());
             panel.setBorder(JBUI.Borders.empty(8));
             JPanel top = new JPanel(new BorderLayout(0, 8));
@@ -116,7 +116,6 @@ public final class CostsToolWindow implements ToolWindowFactory {
             overviewScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
             tabs.addTab("Overview", overviewScroll);
             sourcePanel.setBorder(JBUI.Borders.empty(0, 8));
-            sourcePanel.add(new JLabel("Source code"), BorderLayout.NORTH);
             sourcePanel.add(source);
             JPanel details = new JPanel(new BorderLayout(0, 12));
             details.add(sourcePanel, BorderLayout.NORTH);
@@ -256,18 +255,22 @@ public final class CostsToolWindow implements ToolWindowFactory {
                 explanation.setText(document("<h3>Select a hotspot</h3><p>Inspect measured scope, source mapping and Vue-generated code.</p>"));
                 evidence.setText(document(""));
                 sourcePanel.setVisible(false);
-                generated.showCode("Generated code is available for Vue checks recorded with TS Costs 0.2 or later.", "message.txt");
+                generated.showMessage("Generated code is available for Vue checks recorded with TS Costs 0.2 or later.");
                 resetExplanationScroll();
                 return;
             }
             var h = row.hint;
+            String filename = row.file.path.substring(row.file.path.lastIndexOf('/') + 1);
+            String subject = h.subject != null && h.subject.contains(" · ") ? "<p>" + escape(h.subject) + "</p>" : "";
             explanation.setText(document("<h2>" + escape(h.label()) + " · " + time(h.ms) + "</h2>"
-                + "<p>" + escape(row.file.path) + ":" + h.line + " &nbsp; · &nbsp; " + escape(h.subject) + "</p>"
+                + "<p><b>" + escape(filename) + ":" + h.line + "</b> · recorded snapshot</p>" + subject
+                + checkShare(h.ms)
                 + "<h3>What TypeScript checked</h3><p>" + escape(h.explanation == null ? h.detail : h.explanation) + "</p>"));
+            explanation.setToolTipText(row.file.path + ":" + h.line);
             String snippet = h.sourceSnippet == null ? h.snippet : h.sourceSnippet;
             source.showCode(snippet == null ? "" : snippet, row.file.path);
             int lines = snippet == null ? 1 : (int) snippet.lines().count();
-            source.setPreferredSize(new Dimension(0, JBUI.scale(Math.min(220, Math.max(84, lines * 20 + 16)))));
+            source.setPreferredSize(new Dimension(0, JBUI.scale(34 + Math.min(240, Math.max(64, lines * 20 + 16)))));
             sourcePanel.setVisible(true);
             evidence.setText(document("<h3>Measured evidence</h3><p>" + escape(h.event) + " · " + escape(h.mapping)
                 + "<br>Inclusive " + time(h.ms) + " · recorded children " + time(h.childMs)
@@ -279,11 +282,18 @@ public final class CostsToolWindow implements ToolWindowFactory {
             explanation.setCaretPosition(0);
             evidence.setCaretPosition(0);
             boolean hasGenerated = h.generatedSnippet != null && !h.generatedSnippet.isBlank();
-            generated.showCode(!hasGenerated
-                ? "No generated source was captured for this event. Type relations and ordinary TypeScript code have no Vue declaration snippet."
-                : h.generatedSnippet, hasGenerated ? "generated.ts" : "message.txt");
+            if (hasGenerated) generated.showCode(h.generatedSnippet, "generated.ts");
+            else generated.showMessage("No generated source was captured for this event. Type relations and ordinary TypeScript code have no Vue declaration snippet.");
             explanationPanel.revalidate();
             resetExplanationScroll();
+        }
+
+        private String checkShare(double milliseconds) {
+            Double total = displayed.summary == null ? null : displayed.summary.checkMs;
+            if (total == null || total <= 0 || milliseconds > total) return "<p>Inclusive elapsed compiler time.</p>";
+            double percent = milliseconds / total * 100;
+            String share = percent > 0 && percent < 0.01 ? "&lt;0.01" : String.format(Locale.ROOT, "%.2f", percent);
+            return "<p>" + share + "% of the " + time(total) + " type-checking phase. Inclusive time; events overlap.</p>";
         }
 
         private void resetExplanationScroll() {
@@ -322,8 +332,8 @@ public final class CostsToolWindow implements ToolWindowFactory {
             Browser(boolean fileMode) {
                 this.fileMode = fileMode;
                 component.setBorder(JBUI.Borders.emptyTop(8));
-                model = new DefaultTableModel(fileMode ? new Object[] {"File", "Check ms", "Mapped regions"}
-                    : new Object[] {"File", "Line", "Elapsed ms", "Check"}, 0) {
+                model = new DefaultTableModel(fileMode ? new Object[] {"File", "Check time", "Mapped regions"}
+                    : new Object[] {"File", "Line", "Elapsed", "Check"}, 0) {
                     @Override public boolean isCellEditable(int row, int column) { return false; }
                     @Override public Class<?> getColumnClass(int column) {
                         return fileMode ? column == 1 ? Double.class : column == 2 ? Integer.class : String.class
@@ -335,6 +345,17 @@ public final class CostsToolWindow implements ToolWindowFactory {
                 table.setFillsViewportHeight(true);
                 table.setRowHeight(JBUI.scale(27));
                 table.getColumnModel().getColumn(0).setPreferredWidth(320);
+                table.getColumnModel().getColumn(0).setCellRenderer(new DefaultTableCellRenderer() {
+                    @Override public java.awt.Component getTableCellRendererComponent(JTable table, Object value,
+                            boolean selected, boolean focused, int row, int column) {
+                        super.getTableCellRendererComponent(table, value, selected, focused, row, column);
+                        String path = String.valueOf(value);
+                        int separator = path.lastIndexOf('/');
+                        setText(separator < 0 ? path : path.substring(separator + 1) + " — " + path.substring(0, separator));
+                        setToolTipText(path);
+                        return this;
+                    }
+                });
                 table.getSelectionModel().addListSelectionListener(event -> {
                     if (!event.getValueIsAdjusting() && table.getSelectedRow() >= 0 && !fileMode) showEvidence(selected());
                 });
@@ -349,8 +370,14 @@ public final class CostsToolWindow implements ToolWindowFactory {
                         navigate(row);
                     }
                 });
-                DefaultTableCellRenderer numeric = new DefaultTableCellRenderer();
+                DefaultTableCellRenderer numeric = new DefaultTableCellRenderer() {
+                    @Override protected void setValue(Object value) {
+                        setText(value instanceof Double milliseconds ? time(milliseconds) : "");
+                    }
+                };
                 numeric.setHorizontalAlignment(SwingConstants.RIGHT);
+                numeric.setToolTipText(fileMode ? "Recorded file-check time"
+                    : "Inclusive elapsed compiler time. Events can overlap.");
                 table.setDefaultRenderer(Double.class, numeric);
                 component.add(new JBScrollPane(table));
                 JPanel footer = new JPanel(new BorderLayout());
@@ -371,7 +398,7 @@ public final class CostsToolWindow implements ToolWindowFactory {
                 model.setRowCount(0);
                 int start = page * PAGE_SIZE, end = Math.min(rows.size(), start + PAGE_SIZE);
                 for (Row row : rows.subList(start, end)) {
-                    double ms = Math.round(row.milliseconds() * 100.0) / 100.0;
+                    double ms = row.milliseconds();
                     model.addRow(fileMode ? new Object[] { row.file.path, ms, row.file.hints.size() }
                         : new Object[] { row.file.path, row.hint.line, ms, row.hint.label() });
                 }
@@ -395,6 +422,8 @@ public final class CostsToolWindow implements ToolWindowFactory {
 
     private static String time(Double value) {
         if (value == null) return "Not measured";
+        if (value > 0 && value < 0.01) return String.format(Locale.ROOT, "%.1f µs", value * 1000);
+        if (value > 0 && value < 1) return String.format(Locale.ROOT, "%.2f ms", value);
         return value >= 1000 ? String.format(Locale.ROOT, "%.2f s", value / 1000) : String.format(Locale.ROOT, "%.1f ms", value);
     }
     private static String bytes(double value) { return String.format(Locale.ROOT, "%.1f MiB", value / 1024 / 1024); }

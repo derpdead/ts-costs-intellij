@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.3
+
+- Copy recorded source and generated TypeScript snippets, or expand them in a resizable editor dialog.
+- Toggle line wrapping in each preview, including the expanded dialog.
+- Keep file names visible before directory paths, retain full-path tooltips, and use consistent time units.
+- Keep cost headers concise and show the selected event against the type-checking phase.
+- Label source previews as recorded snapshots and retain precision for sub-millisecond timings.
+
 ## 0.2.2
 
 - Show source in Why this cost in a native read-only code preview instead of inline HTML.
