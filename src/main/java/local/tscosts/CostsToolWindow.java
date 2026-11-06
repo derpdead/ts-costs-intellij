@@ -61,8 +61,14 @@ public final class CostsToolWindow implements ToolWindowFactory {
         private final JCheckBox inlays;
         private final Browser hotspots = new Browser(false);
         private final Browser files = new Browser(true);
-        private final JEditorPane evidence = new JEditorPane("text/html", "");
-        private final JTextArea generated = new JTextArea();
+        private final JPanel explanationPanel = new OverviewPanel();
+        private final JBScrollPane explanationScroll = new JBScrollPane(explanationPanel);
+        private final JEditorPane explanation = html("");
+        private final JEditorPane evidence = html("");
+        private final JPanel sourcePanel = new JPanel(new BorderLayout(0, 6));
+        private final CodePreview source;
+        private final CodePreview generated;
+        private boolean disposed;
         private ProfileData displayed;
         private ProfileData.Hint displayedHint;
         private ProfileData.FileCost displayedFile;
@@ -70,6 +76,8 @@ public final class CostsToolWindow implements ToolWindowFactory {
         View(Project project) {
             this.project = project;
             service = CostsService.get(project);
+            source = new CodePreview(project, this, "Measured source code");
+            generated = new CodePreview(project, this, "Generated TypeScript code");
             inlays = new JCheckBox("Inlays", service.enabled());
             panel.setBorder(JBUI.Borders.empty(8));
             JPanel top = new JPanel(new BorderLayout(0, 8));
@@ -107,14 +115,18 @@ public final class CostsToolWindow implements ToolWindowFactory {
             overview.setBorder(JBUI.Borders.empty(16, 4));
             overviewScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
             tabs.addTab("Overview", overviewScroll);
-            evidence.setEditable(false);
-            evidence.putClientProperty(JEditorPane.HONOR_DISPLAY_PROPERTIES, true);
-            generated.setEditable(false);
-            generated.setFont(new Font(Font.MONOSPACED, Font.PLAIN, JBUI.scale(12)));
-            generated.setBorder(JBUI.Borders.empty(8));
+            sourcePanel.setBorder(JBUI.Borders.empty(0, 8));
+            sourcePanel.add(new JLabel("Source code"), BorderLayout.NORTH);
+            sourcePanel.add(source);
+            JPanel details = new JPanel(new BorderLayout(0, 12));
+            details.add(sourcePanel, BorderLayout.NORTH);
+            details.add(evidence);
+            explanationPanel.add(explanation, BorderLayout.NORTH);
+            explanationPanel.add(details);
+            explanationScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
             JTabbedPane detailTabs = new JTabbedPane();
-            detailTabs.addTab("Why this cost", new JBScrollPane(evidence));
-            detailTabs.addTab("Generated code", new JBScrollPane(generated));
+            detailTabs.addTab("Why this cost", explanationScroll);
+            detailTabs.addTab("Generated code", generated);
             JSplitPane split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, hotspots.component, detailTabs);
             split.setResizeWeight(0.55);
             split.setBorder(JBUI.Borders.empty());
@@ -233,28 +245,51 @@ public final class CostsToolWindow implements ToolWindowFactory {
         }
 
         private void showEvidence(Row row) {
+            ProfileData profile = displayed;
+            ApplicationManager.getApplication().invokeLater(() -> {
+                if (!disposed && !project.isDisposed() && displayed == profile) showEvidenceInContext(row);
+            }, ModalityState.nonModal());
+        }
+
+        private void showEvidenceInContext(Row row) {
             if (row == null || row.hint == null) {
-                evidence.setText(document("<h3>Select a hotspot</h3><p>Inspect measured scope, source mapping and Vue-generated code.</p>"));
-                generated.setText("Generated code is available for Vue checks recorded with TS Costs 0.2 or later.");
+                explanation.setText(document("<h3>Select a hotspot</h3><p>Inspect measured scope, source mapping and Vue-generated code.</p>"));
+                evidence.setText(document(""));
+                sourcePanel.setVisible(false);
+                generated.showCode("Generated code is available for Vue checks recorded with TS Costs 0.2 or later.", "message.txt");
+                resetExplanationScroll();
                 return;
             }
             var h = row.hint;
-            evidence.setText(document("<h2>" + escape(h.label()) + " · " + time(h.ms) + "</h2>"
+            explanation.setText(document("<h2>" + escape(h.label()) + " · " + time(h.ms) + "</h2>"
                 + "<p>" + escape(row.file.path) + ":" + h.line + " &nbsp; · &nbsp; " + escape(h.subject) + "</p>"
-                + "<h3>What TypeScript checked</h3><p>" + escape(h.explanation == null ? h.detail : h.explanation) + "</p>"
-                + "<p><code>" + escape(h.sourceSnippet == null ? h.snippet : h.sourceSnippet) + "</code></p>"
-                + "<h3>Measured evidence</h3><p>" + escape(h.event) + " · " + escape(h.mapping)
+                + "<h3>What TypeScript checked</h3><p>" + escape(h.explanation == null ? h.detail : h.explanation) + "</p>"));
+            String snippet = h.sourceSnippet == null ? h.snippet : h.sourceSnippet;
+            source.showCode(snippet == null ? "" : snippet, row.file.path);
+            int lines = snippet == null ? 1 : (int) snippet.lines().count();
+            source.setPreferredSize(new Dimension(0, JBUI.scale(Math.min(220, Math.max(84, lines * 20 + 16)))));
+            sourcePanel.setVisible(true);
+            evidence.setText(document("<h3>Measured evidence</h3><p>" + escape(h.event) + " · " + escape(h.mapping)
                 + "<br>Inclusive " + time(h.ms) + " · recorded children " + time(h.childMs)
                 + " · outside recorded children " + time(h.unattributedMs) + "</p>"
                 + "<p>" + escape(h.children) + "</p>"
                 + "<p>" + escape(h.evidence) + "</p>"
                 + "<h3>Limits of attribution</h3><p>" + escape(h.limitation == null ? displayed.interpretation : h.limitation)
                 + " Time outside recorded children is not intrinsic self CPU. No per-line memory measurement is available.</p>"));
+            explanation.setCaretPosition(0);
             evidence.setCaretPosition(0);
-            generated.setText(h.generatedSnippet == null || h.generatedSnippet.isBlank()
+            boolean hasGenerated = h.generatedSnippet != null && !h.generatedSnippet.isBlank();
+            generated.showCode(!hasGenerated
                 ? "No generated source was captured for this event. Type relations and ordinary TypeScript code have no Vue declaration snippet."
-                : h.generatedSnippet);
-            generated.setCaretPosition(0);
+                : h.generatedSnippet, hasGenerated ? "generated.ts" : "message.txt");
+            explanationPanel.revalidate();
+            resetExplanationScroll();
+        }
+
+        private void resetExplanationScroll() {
+            SwingUtilities.invokeLater(() -> {
+                if (!disposed) explanationScroll.getVerticalScrollBar().setValue(0);
+            });
         }
 
         private void navigate(Row row) {
@@ -346,7 +381,7 @@ public final class CostsToolWindow implements ToolWindowFactory {
             }
         }
 
-        @Override public void dispose() { service.onViewChanged(() -> {}); }
+        @Override public void dispose() { disposed = true; service.onViewChanged(() -> {}); }
     }
 
     private static final class OverviewPanel extends JPanel implements Scrollable {
