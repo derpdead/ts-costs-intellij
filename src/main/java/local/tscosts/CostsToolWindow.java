@@ -62,6 +62,7 @@ public final class CostsToolWindow implements ToolWindowFactory {
         private final Browser hotspots = new Browser(false);
         private final Browser files = new Browser(true);
         private final JPanel explanationPanel = new OverviewPanel();
+        private final JBScrollPane explanationScroll = new JBScrollPane(explanationPanel);
         private final JEditorPane explanation = html("");
         private final JEditorPane evidence = html("");
         private final JPanel sourcePanel = new JPanel(new BorderLayout(0, 6));
@@ -122,7 +123,6 @@ public final class CostsToolWindow implements ToolWindowFactory {
             details.add(evidence);
             explanationPanel.add(explanation, BorderLayout.NORTH);
             explanationPanel.add(details);
-            JBScrollPane explanationScroll = new JBScrollPane(explanationPanel);
             explanationScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
             JTabbedPane detailTabs = new JTabbedPane();
             detailTabs.addTab("Why this cost", explanationScroll);
@@ -257,6 +257,7 @@ public final class CostsToolWindow implements ToolWindowFactory {
                 evidence.setText(document(""));
                 sourcePanel.setVisible(false);
                 generated.showCode("Generated code is available for Vue checks recorded with TS Costs 0.2 or later.", "message.txt");
+                resetExplanationScroll();
                 return;
             }
             var h = row.hint;
@@ -282,6 +283,13 @@ public final class CostsToolWindow implements ToolWindowFactory {
                 ? "No generated source was captured for this event. Type relations and ordinary TypeScript code have no Vue declaration snippet."
                 : h.generatedSnippet, hasGenerated ? "generated.ts" : "message.txt");
             explanationPanel.revalidate();
+            resetExplanationScroll();
+        }
+
+        private void resetExplanationScroll() {
+            SwingUtilities.invokeLater(() -> {
+                if (!disposed) explanationScroll.getVerticalScrollBar().setValue(0);
+            });
         }
 
         private void navigate(Row row) {
