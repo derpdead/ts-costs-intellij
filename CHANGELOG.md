@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0
+
+- Show recorded nested operations with inclusive elapsed times and readable source/target type pairs.
+- Explain union/intersection sizes, type declarations and generated Vue helpers without assigning them an invented cost.
+- Offer focused optimization experiments based on recorded type evidence and the mapped component contract.
+- Distinguish measured evidence, missing attribution and suggestions; document how to verify a change.
+- Mark truncated recorded excerpts and keep earlier profiles readable.
+
 ## 0.2.3
 
 - Copy recorded source and generated TypeScript snippets, or expand them in a resizable editor dialog.

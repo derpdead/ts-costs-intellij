@@ -46,8 +46,36 @@ public final class ProfileData {
         public String eventKey;
         public String title, subject, explanation, sourceSnippet, generatedSnippet, evidence, limitation, children;
         public double childMs, unattributedMs;
+        public boolean sourceTruncated, generatedTruncated;
+        public Analysis analysis;
 
         public String label() { return title == null ? kind : title; }
+    }
+
+    public static final class Analysis {
+        public String attribution, finding, verification;
+        public int totalOperations, omittedOperations;
+        public List<Operation> operations;
+        public List<String> helpers;
+        public List<Suggestion> actions;
+    }
+
+    public static final class Operation {
+        public String event;
+        public double ms;
+        public int depth;
+        public TypeEvidence sourceType, targetType;
+    }
+
+    public static final class TypeEvidence {
+        public int id, memberCount, omittedMembers;
+        public String label, kind, declaration;
+        public boolean resolved;
+        public List<String> members;
+    }
+
+    public static final class Suggestion {
+        public String title, basis, change, reference;
     }
 
     public static ProfileData read(Path path) throws IOException {
@@ -81,9 +109,36 @@ public final class ProfileData {
             for (Hint hint : file.hints) {
                 if (hint == null || hint.start < 0 || hint.end <= hint.start || !Double.isFinite(hint.ms) || hint.ms < 0
                     || hint.kind == null || hint.event == null) throw new IOException("Invalid hint range");
+                if (hint.analysis != null) validateAnalysis(hint.analysis, hint.ms);
             }
         }
         return data;
+    }
+
+    private static void validateAnalysis(Analysis analysis, double milliseconds) throws IOException {
+        if (analysis.operations == null || analysis.operations.size() > 12
+            || analysis.totalOperations < analysis.operations.size()
+            || analysis.omittedOperations != analysis.totalOperations - analysis.operations.size()
+            || analysis.actions == null || analysis.actions.size() > 3
+            || analysis.helpers == null || analysis.helpers.size() > 4) throw new IOException("Invalid cost analysis");
+        for (Operation operation : analysis.operations) {
+            if (operation == null || operation.event == null || !Double.isFinite(operation.ms) || operation.ms < 0
+                || operation.ms > milliseconds + 0.001 || operation.depth < 0 || operation.depth > 3) {
+                throw new IOException("Invalid recorded operation");
+            }
+            for (TypeEvidence type : new TypeEvidence[] { operation.sourceType, operation.targetType }) {
+                if (type != null && (type.id < 0 || type.label == null || type.kind == null || type.memberCount < 0
+                    || type.omittedMembers < 0 || type.members == null || type.members.size() > 6
+                    || type.omittedMembers != Math.max(0, type.memberCount - type.members.size()))) {
+                    throw new IOException("Invalid type evidence");
+                }
+            }
+        }
+        for (Suggestion action : analysis.actions) {
+            if (action == null || action.title == null || action.basis == null || action.change == null) {
+                throw new IOException("Invalid optimization suggestion");
+            }
+        }
     }
 
     public static String fingerprint(String text) {

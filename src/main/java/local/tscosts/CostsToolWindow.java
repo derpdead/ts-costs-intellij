@@ -32,6 +32,7 @@ import java.util.Locale;
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.event.HyperlinkEvent;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 
@@ -78,6 +79,12 @@ public final class CostsToolWindow implements ToolWindowFactory {
             service = CostsService.get(project);
             source = new CodePreviewPanel(project, this, "Recorded source");
             generated = new CodePreviewPanel(project, this, "Generated TypeScript");
+            evidence.addHyperlinkListener(event -> {
+                if (event.getEventType() == HyperlinkEvent.EventType.ACTIVATED && event.getURL() != null
+                    && event.getURL().toExternalForm().startsWith("https://github.com/microsoft/TypeScript/wiki/Performance#")) {
+                    com.intellij.ide.BrowserUtil.browse(event.getURL());
+                }
+            });
             inlays = new JCheckBox("Inlays", service.enabled());
             panel.setBorder(JBUI.Borders.empty(8));
             JPanel top = new JPanel(new BorderLayout(0, 8));
@@ -265,24 +272,19 @@ public final class CostsToolWindow implements ToolWindowFactory {
             explanation.setText(document("<h2>" + escape(h.label()) + " · " + time(h.ms) + "</h2>"
                 + "<p><b>" + escape(filename) + ":" + h.line + "</b> · recorded snapshot</p>" + subject
                 + checkShare(h.ms)
-                + "<h3>What TypeScript checked</h3><p>" + escape(h.explanation == null ? h.detail : h.explanation) + "</p>"));
+                + "<h3>What TypeScript checked</h3><p>" + escape(h.explanation == null ? h.detail : h.explanation) + "</p>"
+                + CostExplanation.finding(h)));
             explanation.setToolTipText(row.file.path + ":" + h.line);
             String snippet = h.sourceSnippet == null ? h.snippet : h.sourceSnippet;
-            source.showCode(snippet == null ? "" : snippet, row.file.path);
+            source.showCode(snippet == null ? "" : snippet, row.file.path, h.sourceTruncated);
             int lines = snippet == null ? 1 : (int) snippet.lines().count();
             source.setPreferredSize(new Dimension(0, JBUI.scale(34 + Math.min(240, Math.max(64, lines * 20 + 16)))));
             sourcePanel.setVisible(true);
-            evidence.setText(document("<h3>Measured evidence</h3><p>" + escape(h.event) + " · " + escape(h.mapping)
-                + "<br>Inclusive " + time(h.ms) + " · recorded children " + time(h.childMs)
-                + " · outside recorded children " + time(h.unattributedMs) + "</p>"
-                + "<p>" + escape(h.children) + "</p>"
-                + "<p>" + escape(h.evidence) + "</p>"
-                + "<h3>Limits of attribution</h3><p>" + escape(h.limitation == null ? displayed.interpretation : h.limitation)
-                + " Time outside recorded children is not intrinsic self CPU. No per-line memory measurement is available.</p>"));
+            evidence.setText(document(CostExplanation.details(h, displayed.interpretation)));
             explanation.setCaretPosition(0);
             evidence.setCaretPosition(0);
             boolean hasGenerated = h.generatedSnippet != null && !h.generatedSnippet.isBlank();
-            if (hasGenerated) generated.showCode(h.generatedSnippet, "generated.ts");
+            if (hasGenerated) generated.showCode(h.generatedSnippet, "generated.ts", h.generatedTruncated);
             else generated.showMessage("No generated source was captured for this event. Type relations and ordinary TypeScript code have no Vue declaration snippet.");
             explanationPanel.revalidate();
             resetExplanationScroll();

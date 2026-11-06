@@ -46,6 +46,12 @@ export function indexEvents(events) {
     event.childMs = unionMilliseconds(event.children.map(child => [child.ts, child.endTs]))
     event.unattributedMs = Math.max(0, event.durationMs - event.childMs)
   }
+  for (const thread of threads.values()) {
+    for (let index = thread.length - 1; index >= 0; index -= 1) {
+      const event = thread[index]
+      event.descendantCount = event.children.reduce((total, child) => total + 1 + child.descendantCount, 0)
+    }
+  }
   return events
 }
 
