@@ -6,7 +6,7 @@ TS Costs records a compiler trace and maps it back to your current source snapsh
 
 ## Install
 
-[JetBrains Marketplace](https://plugins.jetbrains.com/plugin/35858-ts-costs) submission is awaiting moderation.
+Install from [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/35858-ts-costs), or use the ZIP from GitHub for manual installation.
 
 Download the plugin ZIP from [Releases](https://github.com/derpdead/ts-costs-intellij/releases).
 In your JetBrains IDE, open **Settings → Plugins → ⚙ → Install Plugin from Disk**, select the ZIP and follow the IDE's reload instructions.
@@ -51,7 +51,7 @@ Profiling adds overhead and forces a fresh check. Results describe this particul
 
 For `<Widget v-model:code="value" />`, Vue generates an update-event handler and helper types such as `Partial<__VLS_ResolveEvent<…>>` and `__VLS_EventArgs<…>`. TypeScript checks the event payload, inferred handler arguments and assignment to the model.
 
-The source mapping may point to just `value`, even though the measured declaration includes that generated type machinery. The **Why this cost** pane shows the selected event against the whole type-checking phase and explains the scope and shows source in a read-only editor with preserved indentation, syntax highlighting, line numbers and soft wrapping. **Generated code** uses the same preview for the exact same-run TypeScript snippet. Both previews follow your IDE editor font and color scheme. Use **Copy** for the recorded snippet, **Expand…** for a resizable code window, and **Wrap lines** to switch between wrapped lines and horizontal scrolling. These controls change only the preview; captured code stays unchanged. Lazy resolution of a component's types can contribute on first use. Without nested trace evidence, the plugin does not claim which inner type caused the delay or promise a specific optimization.
+The source mapping may point to just `value`, even though the measured declaration includes that generated type machinery. The **Why this cost** pane shows the selected event against the whole type-checking phase and explains the measured scope. Its read-only source editor preserves indentation, syntax highlighting, line numbers and soft wrapping. **Generated code** uses the same preview for the exact same-run TypeScript snippet. Both previews follow your IDE editor font and color scheme. Use **Copy** for the recorded snippet, **Expand…** for a resizable code window, and **Wrap lines** to switch between wrapped lines and horizontal scrolling. These controls change only the preview; captured code stays unchanged. Lazy resolution of a component's types can contribute on first use. Without nested trace evidence, the plugin does not claim which inner type caused the delay or promise a specific optimization.
 
 ## Reading Why this cost
 
