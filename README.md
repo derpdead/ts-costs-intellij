@@ -6,7 +6,7 @@ TS Costs records a compiler trace and maps it back to your current source snapsh
 
 ## Install
 
-[JetBrains Marketplace](https://plugins.jetbrains.com/plugin/35858-ts-costs) submission is awaiting moderation.
+Install from [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/35858-ts-costs), or use the ZIP from GitHub for manual installation.
 
 Download the plugin ZIP from [Releases](https://github.com/derpdead/ts-costs-intellij/releases).
 In your JetBrains IDE, open **Settings → Plugins → ⚙ → Install Plugin from Disk**, select the ZIP and follow the IDE's reload instructions.
@@ -51,7 +51,15 @@ Profiling adds overhead and forces a fresh check. Results describe this particul
 
 For `<Widget v-model:code="value" />`, Vue generates an update-event handler and helper types such as `Partial<__VLS_ResolveEvent<…>>` and `__VLS_EventArgs<…>`. TypeScript checks the event payload, inferred handler arguments and assignment to the model.
 
-The source mapping may point to just `value`, even though the measured declaration includes that generated type machinery. The **Why this cost** pane shows the selected event against the whole type-checking phase and explains the scope and shows source in a read-only editor with preserved indentation, syntax highlighting, line numbers and soft wrapping. **Generated code** uses the same preview for the exact same-run TypeScript snippet. Both previews follow your IDE editor font and color scheme. Use **Copy** for the recorded snippet, **Expand…** for a resizable code window, and **Wrap lines** to switch between wrapped lines and horizontal scrolling. These controls change only the preview; captured code stays unchanged. Lazy resolution of a component's types can contribute on first use. Without nested trace evidence, the plugin does not claim which inner type caused the delay or promise a specific optimization.
+The source mapping may point to just `value`, even though the measured declaration includes that generated type machinery. The **Why this cost** pane shows the selected event against the whole type-checking phase and explains the measured scope. Its read-only source editor preserves indentation, syntax highlighting, line numbers and soft wrapping. **Generated code** uses the same preview for the exact same-run TypeScript snippet. Both previews follow your IDE editor font and color scheme. Use **Copy** for the recorded snippet, **Expand…** for a resizable code window, and **Wrap lines** to switch between wrapped lines and horizontal scrolling. These controls change only the preview; captured code stays unchanged. Lazy resolution of a component's types can contribute on first use. Without nested trace evidence, the plugin does not claim which inner type caused the delay or promise a specific optimization.
+
+## Reading Why this cost
+
+New recordings distinguish **Measured scope only** from **Recorded operations available**. The panel lists up to 12 nested operations (up to three levels), retains their inclusive elapsed times, and resolves recorded source/target type IDs to names, union/intersection sizes and declaration locations. Up to six compared types and six members per type are previewed; omitted counts remain visible. A type relation is one shared operation even when it appears at both declarations.
+
+**What to try** offers experiments based on the types actually present in those recorded operations, or on the Vue component boundary identified by the source map. A helper's presence in generated code is an observation, not a measurement of that helper. Missing nested events never become a claim that a particular variable or type caused the delay. The eight-member union threshold only selects a suggestion; it is not a measured performance limit. Suggestions draw on Microsoft's [TypeScript performance guidance](https://github.com/microsoft/TypeScript/wiki/Performance), and the trace limitations are described in [Performance Tracing](https://github.com/microsoft/TypeScript/wiki/Performance-Tracing).
+
+Change one boundary at a time and record again with the same compiler and configuration. Repeat to assess run-to-run variation and compare the complete type-checking phase: lazy type resolution may move the cost to another line. The plugin does not claim a speedup until you measure it. Earlier profiles still load and ask for a new recording to collect this evidence. Truncated source/generated excerpts are labelled; Copy and Expand retain that same captured excerpt.
 
 ## Local artifacts and Chrome
 
@@ -86,7 +94,7 @@ python3 build.py --ide "/path/to/idea"
 python3 build.py --ide "/Applications/IntelliJ IDEA.app/Contents"
 ```
 
-Python 3.10+, Node.js 22+ and an IDE SDK with JBR javac 21+ are required. Output: `dist/ts-costs-0.2.3.zip` and a source ZIP. The JAR bundles only plugin classes, resources and the dependency-free Node bridge. Project dependencies are resolved from the package you profile.
+Python 3.10+, Node.js 22+ and an IDE SDK with JBR javac 21+ are required. Output: `dist/ts-costs-0.3.0.zip` and a source ZIP. The JAR bundles only plugin classes, resources and the dependency-free Node bridge. Project dependencies are resolved from the package you profile.
 
 CI downloads the official JetBrains SDK, runs the integration tests, compiles the plugin and runs the official JetBrains Plugin Verifier. Marketplace publication is a separate vendor submission and moderation step.
 

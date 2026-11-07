@@ -85,8 +85,20 @@ final class CodePreviewPanel extends JPanel implements Disposable {
         int lines = code.getDocument().getLineCount();
         caption.setText(name + " · " + lines + (lines == 1 ? " line" : " lines"));
         caption.setToolTipText(path);
+        copy.setToolTipText("Copy the recorded snippet");
+        expand.setToolTipText("Open the recorded snippet in a larger window");
         copy.setText("Copy");
         setActionsEnabled(!value.isBlank());
+    }
+
+    void showCode(String value, String path, boolean excerpt) {
+        showCode(value, path);
+        if (excerpt) {
+            caption.setText(name + " · excerpt");
+            caption.setToolTipText(path + " · captured excerpt was truncated");
+            copy.setToolTipText("Copy this truncated recorded excerpt");
+            expand.setToolTipText("Expand this truncated recorded excerpt");
+        }
     }
 
     void showMessage(String message) {

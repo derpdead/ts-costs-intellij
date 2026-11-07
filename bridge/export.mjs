@@ -1,11 +1,10 @@
-import { createReadStream } from 'node:fs'
 import { readFile, rename, writeFile } from 'node:fs/promises'
-import { createInterface } from 'node:readline'
 import { createRequire } from 'node:module'
 import path from 'node:path'
 import { compilerPosition, completedEvents, mapRange, normalizeText, sourceHash } from './mapping.mjs'
 import { indexEvents, intervalCoverage, parseDiagnostics } from './trace.mjs'
 import { sourceContext, explainEvent } from './context.mjs'
+import { readRelationTypes } from './evidence.mjs'
 
 export async function exportProfile(run, root, destination) {
   const projectRequire = createRequire(path.join(root, 'package.json'))
@@ -46,6 +45,8 @@ export async function exportProfile(run, root, destination) {
   }
   const capture = JSON.parse(await readFile(path.join(run, 'capture.json'), 'utf8'))
   const events = indexEvents(completedEvents(JSON.parse(await readFile(path.join(run, 'trace/trace.json'), 'utf8'))))
+  const allRelations = events.filter(event => event.name === 'structuredTypeRelatedTo')
+  const types = await readRelationTypes(path.join(run, 'trace/types.json'), allRelations)
   const files = new Map()
   const records = new Map()
   const getRecord = async file => {
@@ -71,8 +72,8 @@ export async function exportProfile(run, root, destination) {
     const start = normalizeText(record.sourceText.slice(0, range.start)).length
     const end = normalizeText(record.sourceText.slice(0, range.end)).length
     const source = normalizeText(record.sourceText)
-    const context = sourceContext(record.sourceText, range.start, range.end, descriptor(record))
-    const explanation = explainEvent(event, record, range, context)
+    const context = kind === 'type relation' ? null : sourceContext(record.sourceText, range.start, range.end, descriptor(record))
+    const explanation = explainEvent(event, record, range, context, types)
     if (kind === 'type relation') {
       explanation.title = 'Type compatibility check'
       explanation.explanation = detail
@@ -102,20 +103,6 @@ export async function exportProfile(run, root, destination) {
         'Inclusive check of this source region; nested events overlap.')
     }
     if (event.name === 'structuredTypeRelatedTo' && event.durationMs >= 1) relations.push(event)
-  }
-  const neededTypes = new Set(relations.flatMap(event => [event.args.sourceId, event.args.targetId]))
-  const types = new Map()
-  if (neededTypes.size) {
-    const lines = createInterface({ input: createReadStream(path.join(run, 'trace/types.json')), crlfDelay: Infinity })
-    for await (const line of lines) {
-      const json = line.trim().replace(/^\[/, '').replace(/\]$/, '').replace(/,$/, '')
-      if (!json) continue
-      const id = json.match(/^\{"id":(\d+)/)?.[1]
-      if (id && neededTypes.has(Number(id))) {
-        const type = JSON.parse(json)
-        types.set(type.id, type)
-      }
-    }
   }
   for (const event of relations) {
     for (const role of ['source', 'target']) {
